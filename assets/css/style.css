@@ -1,0 +1,232 @@
+/* ====================================================================
+   Atlantis Homes — "Midnight Luxury" theme
+   Tailwind (via CDN, configured inline in includes/header.php) handles
+   layout + spacing utilities. This file only carries what Tailwind's
+   utility classes can't: font loading, the signature skyline motif,
+   keyframes, and a few native-control overrides.
+   ==================================================================== */
+
+:root {
+  --obsidian: #0B0B0C;
+  --obsidian-soft: #141416;
+  --gold: #C5A880;
+  --gold-deep: #9C7F56;
+  --slate: #A1A1AA;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.font-display {
+  font-family: 'Playfair Display', serif;
+}
+
+/* Thin gold scrollbar, dark track — default browser scrollbars break the theme */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--obsidian); }
+::-webkit-scrollbar-thumb { background: var(--gold-deep); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+/* Glassmorphism surfaces used by the sticky nav and floating cards */
+.glass {
+  background: rgba(11, 11, 12, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ---------------------------------------------------------------------
+   Signature element: the gold "skyline" divider.
+   A thin silhouette of a city skyline, used as a section break, a footer
+   crown, and a loading shimmer — ties every page back to the towers and
+   skylines the brand is literally building.
+   --------------------------------------------------------------------- */
+.skyline-divider {
+  display: block;
+  width: 100%;
+  height: 28px;
+  color: var(--gold);
+  opacity: 0.55;
+}
+
+.skyline-divider.flip {
+  transform: scaleY(-1);
+}
+
+/* Scroll-triggered fade/rise-in, toggled by main.js via IntersectionObserver */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { transition: none; opacity: 1; transform: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* Animated counters fade up slightly slower, staggered by inline delay */
+.count-up { font-variant-numeric: tabular-nums; }
+
+/* Gold range slider (ROI calculator) — sliders need vendor-specific rules */
+input[type='range'].gold-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(to right, var(--gold) 0%, var(--gold) var(--fill, 50%), #2A2A2D var(--fill, 50%), #2A2A2D 100%);
+  border-radius: 4px;
+  outline: none;
+}
+input[type='range'].gold-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 3px solid var(--obsidian);
+  box-shadow: 0 0 0 3px rgba(197, 168, 128, 0.35);
+  cursor: pointer;
+  margin-top: -1px;
+}
+input[type='range'].gold-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 3px solid var(--obsidian);
+  box-shadow: 0 0 0 3px rgba(197, 168, 128, 0.35);
+  cursor: pointer;
+}
+
+/* Masonry-style review feed using native CSS columns */
+.review-masonry {
+  column-count: 1;
+  column-gap: 1.5rem;
+}
+@media (min-width: 768px) { .review-masonry { column-count: 2; } }
+@media (min-width: 1280px) { .review-masonry { column-count: 3; } }
+.review-masonry > * {
+  break-inside: avoid;
+  margin-bottom: 1.5rem;
+}
+
+/* Horizontal scroll "Featured Projects" rail — snap for a deliberate, not-jittery feel */
+.snap-rail {
+  scroll-snap-type: x mandatory;
+}
+.snap-rail > * {
+  scroll-snap-align: start;
+}
+
+/* Milestone progress track on the client dashboard and admin updater */
+.milestone-track {
+  position: relative;
+}
+.milestone-track::before {
+  content: '';
+  position: absolute;
+  top: 11px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #2A2A2D;
+  z-index: 0;
+}
+.milestone-fill {
+  position: absolute;
+  top: 11px;
+  left: 0;
+  height: 2px;
+  background: var(--gold);
+  z-index: 1;
+  transition: width 0.6s ease;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in { animation: fade-in 0.35s ease; }
+
+/* Investor hub development-type selector */
+.type-pill {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.6rem 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--slate);
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.2s ease;
+}
+.type-pill:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+.type-pill.active { background: var(--gold); color: var(--obsidian); border-color: var(--gold); }
+
+/* Portfolio filter pills */
+.filter-btn {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+.filter-btn:hover { border-color: var(--gold); color: var(--gold); }
+.filter-btn.active { background: var(--gold); border-color: var(--gold); color: var(--obsidian); }
+
+/* Property card detail tabs */
+.tab-btn {
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  color: var(--slate);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+.tab-btn:hover { color: #fff; }
+.tab-btn.active { background: rgba(197, 168, 128, 0.12); color: var(--gold); border-color: rgba(197, 168, 128, 0.3); }
+
+.amenity-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  padding: 0.4rem 0.85rem;
+}
+
+/* Star rating control on the review form */
+.star-btn {
+  font-size: 1.75rem;
+  line-height: 1;
+  color: #3a3a3d;
+  transition: color 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+.star-btn.active,
+.star-btn:hover {
+  color: var(--gold);
+  transform: scale(1.08);
+}
