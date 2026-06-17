@@ -19,7 +19,8 @@ $navUser   = current_user();
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<script src="https://cdn.tailwindcss.com"></script>
+
+ <script src="<?= base_url('assets/js/tailwind.js') ?>"></script>
 <script>
   tailwind.config = {
     theme: {

@@ -11,6 +11,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 
+$user = current_user();
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
 $type = $input['type'] ?? '';
@@ -24,7 +25,7 @@ $message = trim((string) ($input['message'] ?? ''));
 
 $errors = [];
 
-if (!in_array($type, ['booking', 'contact', 'estimate'], true)) {
+if (!in_array($type, ['booking', 'contact', 'estimate', 'investment'], true)) {
     $errors[] = 'Invalid request type.';
 }
 if ($name === '') {
@@ -50,11 +51,12 @@ if ($propertyId) {
 }
 
 $stmt = get_db()->prepare("
-    INSERT INTO inquiries (type, name, email, phone, property_id, preferred_date, message, status)
-    VALUES (:type, :name, :email, :phone, :property_id, :preferred_date, :message, 'new')
+    INSERT INTO inquiries (type, user_id, name, email, phone, property_id, preferred_date, message, status)
+    VALUES (:type, :user_id, :name, :email, :phone, :property_id, :preferred_date, :message, 'new')
 ");
 $stmt->execute([
     ':type' => $type,
+    ':user_id' => $user['id'] ?? null,
     ':name' => $name,
     ':email' => $email,
     ':phone' => $phone,
@@ -67,6 +69,7 @@ $confirmations = [
     'booking' => "Thanks, $name — your session request has been received. Our team will confirm a time by email shortly.",
     'contact' => "Thanks, $name — we've received your message and will reply within one business day.",
     'estimate' => "Thanks, $name — we've received your build estimate and a consultant will follow up with a refined quote.",
+    'investment' => "Thanks, $name — your investment reservation has been received. An investment consultant will follow up to finalise the contract.",
 ];
 
 json_response(['ok' => true, 'message' => $confirmations[$type]]);

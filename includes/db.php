@@ -39,9 +39,135 @@ function get_db(): PDO
     if ($isNewDatabase) {
         create_schema($pdo);
         seed_database($pdo);
+    } else {
+        migrate_database($pdo);
     }
 
     return $pdo;
+}
+
+/**
+ * Self-healing migrations for databases created by an earlier version of
+ * this app (e.g. before the `inquiries` table existed, or before it had
+ * a `user_id` column). Each check is cheap and a no-op once applied, so
+ * this runs safely on every request rather than needing a separate
+ * migration command. New schema changes should add a guarded check here
+ * rather than only in create_schema().
+ */
+function migrate_database(PDO $pdo): void
+{
+    if (!table_exists($pdo, 'investment_opportunities')) {
+        $pdo->exec("
+            CREATE TABLE investment_opportunities (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                type            TEXT NOT NULL,
+                name            TEXT NOT NULL,
+                location        TEXT NOT NULL DEFAULT '',
+                description     TEXT NOT NULL DEFAULT '',
+                min_investment  REAL NOT NULL DEFAULT 0,
+                target_amount   REAL NOT NULL DEFAULT 0,
+                amount_raised   REAL NOT NULL DEFAULT 0,
+                expected_roi_pct REAL NOT NULL DEFAULT 0,
+                term_months     INTEGER NOT NULL DEFAULT 0,
+                image_url       TEXT NOT NULL DEFAULT '',
+                status          TEXT NOT NULL DEFAULT 'open',
+                created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+        ");
+        seed_investment_opportunities($pdo);
+    }
+
+    if (!table_exists($pdo, 'inquiries')) {
+        $pdo->exec("
+            CREATE TABLE inquiries (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                type            TEXT NOT NULL,
+                user_id         INTEGER REFERENCES users(id),
+                name            TEXT NOT NULL,
+                email           TEXT NOT NULL,
+                phone           TEXT NOT NULL DEFAULT '',
+                property_id     INTEGER REFERENCES properties(id),
+                investment_id   INTEGER REFERENCES investment_opportunities(id),
+                preferred_date  TEXT NOT NULL DEFAULT '',
+                message         TEXT NOT NULL DEFAULT '',
+                spec_details    TEXT NOT NULL DEFAULT '',
+                status          TEXT NOT NULL DEFAULT 'new',
+                created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+        ");
+        return; // freshly created with every column already present
+    }
+
+    if (!column_exists($pdo, 'inquiries', 'user_id')) {
+        $pdo->exec('ALTER TABLE inquiries ADD COLUMN user_id INTEGER REFERENCES users(id)');
+    }
+    if (!column_exists($pdo, 'inquiries', 'investment_id')) {
+        $pdo->exec('ALTER TABLE inquiries ADD COLUMN investment_id INTEGER REFERENCES investment_opportunities(id)');
+    }
+    if (!column_exists($pdo, 'inquiries', 'spec_details')) {
+        $pdo->exec("ALTER TABLE inquiries ADD COLUMN spec_details TEXT NOT NULL DEFAULT ''");
+    }
+}
+
+function seed_investment_opportunities(PDO $pdo): void
+{
+    $items = [
+        [
+            'type' => 'company', 'name' => 'Atlantis Homes Growth Fund — Series II',
+            'location' => '', 'description' => 'A pooled investment directly in Atlantis Homes Ltd, funding land acquisition and construction across our active pipeline. Returns are paid from company-wide project profits rather than tied to any single building.',
+            'min_investment' => 2000000, 'target_amount' => 500000000, 'amount_raised' => 184500000,
+            'expected_roi_pct' => 22, 'term_months' => 36, 'image_url' => 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80',
+            'status' => 'open',
+        ],
+        [
+            'type' => 'property', 'name' => 'Epe Land Bank — Phase 1',
+            'location' => 'Epe, Lagos', 'description' => 'A land-banking opportunity on a 12-hectare parcel along the Lagos-Epe corridor, acquired ahead of planned road and bridge infrastructure. This is a land-appreciation play, not a home purchase — no construction is planned during the holding period.',
+            'min_investment' => 5000000, 'target_amount' => 300000000, 'amount_raised' => 95000000,
+            'expected_roi_pct' => 65, 'term_months' => 48, 'image_url' => 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80',
+            'status' => 'open',
+        ],
+        [
+            'type' => 'property', 'name' => 'Ajah Rental Income Block (Shares)',
+            'location' => 'Ajah, Lagos', 'description' => 'Fractional shares in a fully tenanted 24-unit rental block. Investors hold a share of the rental income and resale value rather than owning a unit outright — distinct from buying a home in our portfolio.',
+            'min_investment' => 3000000, 'target_amount' => 180000000, 'amount_raised' => 180000000,
+            'expected_roi_pct' => 19, 'term_months' => 24, 'image_url' => 'https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=1200&q=80',
+            'status' => 'closed',
+        ],
+    ];
+
+    $insert = $pdo->prepare("
+        INSERT INTO investment_opportunities
+            (type, name, location, description, min_investment, target_amount, amount_raised, expected_roi_pct, term_months, image_url, status)
+        VALUES
+            (:type, :name, :location, :description, :min_investment, :target_amount, :amount_raised, :expected_roi_pct, :term_months, :image_url, :status)
+    ");
+    foreach ($items as $item) {
+        $insert->execute([
+            ':type' => $item['type'], ':name' => $item['name'], ':location' => $item['location'],
+            ':description' => $item['description'], ':min_investment' => $item['min_investment'],
+            ':target_amount' => $item['target_amount'], ':amount_raised' => $item['amount_raised'],
+            ':expected_roi_pct' => $item['expected_roi_pct'], ':term_months' => $item['term_months'],
+            ':image_url' => $item['image_url'], ':status' => $item['status'],
+        ]);
+    }
+}
+
+function table_exists(PDO $pdo, string $table): bool
+{
+    $stmt = $pdo->prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?");
+    $stmt->execute([$table]);
+    return (bool) $stmt->fetch();
+}
+
+function column_exists(PDO $pdo, string $table, string $column): bool
+{
+    $columns = $pdo->query("PRAGMA table_info($table)")->fetchAll();
+    foreach ($columns as $col) {
+        if ($col['name'] === $column) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function create_schema(PDO $pdo): void
@@ -129,15 +255,36 @@ function create_schema(PDO $pdo): void
     ");
 
     $pdo->exec("
+        CREATE TABLE investment_opportunities (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            type            TEXT NOT NULL,              -- 'company' | 'property'
+            name            TEXT NOT NULL,
+            location        TEXT NOT NULL DEFAULT '',
+            description     TEXT NOT NULL DEFAULT '',
+            min_investment  REAL NOT NULL DEFAULT 0,
+            target_amount   REAL NOT NULL DEFAULT 0,
+            amount_raised   REAL NOT NULL DEFAULT 0,
+            expected_roi_pct REAL NOT NULL DEFAULT 0,
+            term_months     INTEGER NOT NULL DEFAULT 0,
+            image_url       TEXT NOT NULL DEFAULT '',
+            status          TEXT NOT NULL DEFAULT 'open', -- 'open' | 'closed'
+            created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+    ");
+
+    $pdo->exec("
         CREATE TABLE inquiries (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            type            TEXT NOT NULL,              -- 'booking' | 'contact' | 'estimate'
+            type            TEXT NOT NULL,              -- 'booking' | 'contact' | 'estimate' | 'investment'
+            user_id         INTEGER REFERENCES users(id),
             name            TEXT NOT NULL,
             email           TEXT NOT NULL,
             phone           TEXT NOT NULL DEFAULT '',
             property_id     INTEGER REFERENCES properties(id),
+            investment_id   INTEGER REFERENCES investment_opportunities(id),
             preferred_date  TEXT NOT NULL DEFAULT '',
             message         TEXT NOT NULL DEFAULT '',
+            spec_details    TEXT NOT NULL DEFAULT '',  -- JSON: structured estimate/investment specs for admin display
             status          TEXT NOT NULL DEFAULT 'new', -- 'new' | 'contacted'
             created_at      TEXT NOT NULL DEFAULT (datetime('now'))
         );
@@ -154,6 +301,9 @@ function seed_database(PDO $pdo): void
     $client = $pdo->prepare("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'client')");
     $client->execute(['Chiamaka Eze', 'chiamaka@example.com', password_hash('Investor@123', PASSWORD_DEFAULT)]);
     $clientId = (int) $pdo->lastInsertId();
+
+    // --- Investment opportunities (separate from the home-buying portfolio) --
+    seed_investment_opportunities($pdo);
 
     // --- Properties --------------------------------------------------------
     $properties = [
@@ -321,16 +471,16 @@ function seed_database(PDO $pdo): void
 
     // --- Inquiries (bookings / contact messages / quote requests) ---------
     $insertInquiry = $pdo->prepare("
-        INSERT INTO inquiries (type, name, email, phone, property_id, preferred_date, message, status)
-        VALUES (:type, :name, :email, :phone, :property_id, :preferred_date, :message, :status)
+        INSERT INTO inquiries (type, user_id, name, email, phone, property_id, preferred_date, message, status)
+        VALUES (:type, :user_id, :name, :email, :phone, :property_id, :preferred_date, :message, :status)
     ");
     $insertInquiry->execute([
-        ':type' => 'booking', ':name' => 'Funmi Okafor', ':email' => 'funmi.okafor@example.com',
+        ':type' => 'booking', ':user_id' => null, ':name' => 'Funmi Okafor', ':email' => 'funmi.okafor@example.com',
         ':phone' => '+234 803 555 0192', ':property_id' => $propertyIds[2], ':preferred_date' => date('Y-m-d', strtotime('+5 days')),
         ':message' => 'Interested in a site tour of the Eko Atlantic units, ideally a weekend morning.', ':status' => 'new',
     ]);
     $insertInquiry->execute([
-        ':type' => 'contact', ':name' => 'Patrick Nwosu', ':email' => 'patrick.nwosu@example.com',
+        ':type' => 'contact', ':user_id' => null, ':name' => 'Patrick Nwosu', ':email' => 'patrick.nwosu@example.com',
         ':phone' => '+234 701 222 9981', ':property_id' => null, ':preferred_date' => '',
         ':message' => 'Do you have any payment plans that span beyond 24 months for off-plan units?', ':status' => 'contacted',
     ]);

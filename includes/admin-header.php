@@ -11,7 +11,8 @@ $adminUser = current_user();
 $navItems = [
     'analytics' => ['label' => 'Analytics', 'href' => base_url('admin/index.php'), 'icon' => 'M3 3v18h18M7 14l4-4 3 3 5-6'],
     'properties' => ['label' => 'Property Management', 'href' => base_url('admin/properties.php'), 'icon' => 'M3 10l9-7 9 7M5 10v10h14V10'],
-    'purchases' => ['label' => 'Investor Ledger', 'href' => base_url('admin/purchases.php'), 'icon' => 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'],
+    'investments' => ['label' => 'Investment Opportunities', 'href' => base_url('admin/investments.php'), 'icon' => 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'],
+    'purchases' => ['label' => 'Investor Ledger', 'href' => base_url('admin/purchases.php'), 'icon' => 'M3 7l9-4 9 4v2H3zM5 9v9h14V9M9 13h6'],
     'inquiries' => ['label' => 'Inquiries', 'href' => base_url('admin/inquiries.php'), 'icon' => 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z'],
     'reviews' => ['label' => 'Review Moderation', 'href' => base_url('admin/reviews.php'), 'icon' => 'M12 17.3l-5.4 3 1-6-4.6-4 6.1-.6L12 4l2.9 5.7 6.1.6-4.6 4 1 6z'],
 ];
@@ -27,7 +28,7 @@ $navItems = [
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="<?= base_url('assets/js/tailwind.js') ?>"></script>
 <script>
   tailwind.config = {
     theme: {

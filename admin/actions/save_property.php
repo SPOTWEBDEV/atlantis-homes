@@ -1,16 +1,18 @@
+
 <?php
 /**
- * POST /admin/actions/save_property.php
- * Body (JSON): { id?, name, location, type, price_naira, bedrooms, bathrooms,
- *                size_sqm, roi_5yr_pct, roi_10yr_pct, milestone_stage,
- *                summary, overview, amenities (comma-separated string),
- *                floor_plan_url, image_url, featured, csrf_token }
+ * POST /admin/actions/save_property.php  (multipart/form-data)
+ * Fields: id?, name, location, type, price_naira, bedrooms, bathrooms,
+ *         size_sqm, roi_5yr_pct, roi_10yr_pct, milestone_stage, summary,
+ *         overview, amenities (comma-separated), featured, csrf_token,
+ *         existing_image_url, existing_floor_plan_url,
+ *         image (file, required when creating), floor_plan (file, optional)
  *
  * Omitting `id` creates a new property; including it updates that row.
- * This intentionally only touches the listing fields — milestone_stage
- * here just sets the *starting* stage on creation. Day-to-day stage
- * changes belong on admin/update-property.php, which also logs a dated
- * note for the client dashboard.
+ * Uploaded files replace the cover image / floor plan; if no file is
+ * selected on an edit, the existing_* hidden fields preserve what's
+ * already there. This intentionally only touches listing fields —
+ * day-to-day milestone changes belong on admin/update-property.php.
  */
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/auth.php';
@@ -18,29 +20,27 @@ require_once __DIR__ . '/../../includes/functions.php';
 
 require_admin_api();
 
-$input = json_decode(file_get_contents('php://input'), true) ?? [];
-
-if (!csrf_valid($input['csrf_token'] ?? null)) {
+if (!csrf_valid($_POST['csrf_token'] ?? null)) {
     json_response(['ok' => false, 'error' => 'Your session has expired — please refresh the page and try again.'], 419);
 }
 
-$id = filter_var($input['id'] ?? null, FILTER_VALIDATE_INT) ?: null;
-$name = trim((string) ($input['name'] ?? ''));
-$location = trim((string) ($input['location'] ?? ''));
-$type = $input['type'] ?? '';
-$price = filter_var($input['price_naira'] ?? null, FILTER_VALIDATE_FLOAT);
-$bedrooms = filter_var($input['bedrooms'] ?? 0, FILTER_VALIDATE_INT);
-$bathrooms = filter_var($input['bathrooms'] ?? 0, FILTER_VALIDATE_INT);
-$sizeSqm = filter_var($input['size_sqm'] ?? 0, FILTER_VALIDATE_INT);
-$roi5 = filter_var($input['roi_5yr_pct'] ?? 0, FILTER_VALIDATE_FLOAT);
-$roi10 = filter_var($input['roi_10yr_pct'] ?? 0, FILTER_VALIDATE_FLOAT);
-$milestone = $input['milestone_stage'] ?? 'Foundation';
-$summary = trim((string) ($input['summary'] ?? ''));
-$overview = trim((string) ($input['overview'] ?? ''));
-$amenitiesRaw = trim((string) ($input['amenities'] ?? ''));
-$floorPlanUrl = trim((string) ($input['floor_plan_url'] ?? ''));
-$imageUrl = trim((string) ($input['image_url'] ?? ''));
-$featured = !empty($input['featured']) ? 1 : 0;
+$id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT) ?: null;
+$name = trim((string) ($_POST['name'] ?? ''));
+$location = trim((string) ($_POST['location'] ?? ''));
+$type = $_POST['type'] ?? '';
+$price = filter_var($_POST['price_naira'] ?? null, FILTER_VALIDATE_FLOAT);
+$bedrooms = filter_var($_POST['bedrooms'] ?? 0, FILTER_VALIDATE_INT);
+$bathrooms = filter_var($_POST['bathrooms'] ?? 0, FILTER_VALIDATE_INT);
+$sizeSqm = filter_var($_POST['size_sqm'] ?? 0, FILTER_VALIDATE_INT);
+$roi5 = filter_var($_POST['roi_5yr_pct'] ?? 0, FILTER_VALIDATE_FLOAT);
+$roi10 = filter_var($_POST['roi_10yr_pct'] ?? 0, FILTER_VALIDATE_FLOAT);
+$milestone = $_POST['milestone_stage'] ?? 'Foundation';
+$summary = trim((string) ($_POST['summary'] ?? ''));
+$overview = trim((string) ($_POST['overview'] ?? ''));
+$amenitiesRaw = trim((string) ($_POST['amenities'] ?? ''));
+$featured = !empty($_POST['featured']) ? 1 : 0;
+$existingImageUrl = trim((string) ($_POST['existing_image_url'] ?? ''));
+$existingFloorPlanUrl = trim((string) ($_POST['existing_floor_plan_url'] ?? ''));
 
 $allowedTypes = ['off-plan', 'under-construction', 'completed'];
 $allowedStages = ['Foundation', 'Framing', 'Roofing', 'Finishing', 'Completed'];
@@ -53,10 +53,52 @@ if ($price === false || $price <= 0) $errors[] = 'Please enter a valid price.';
 if (!in_array($milestone, $allowedStages, true)) $errors[] = 'Please choose a valid milestone stage.';
 if ($summary === '' || strlen($summary) > 300) $errors[] = 'Please add a short summary (under 300 characters).';
 if ($overview === '') $errors[] = 'Please add an overview description.';
-if ($imageUrl === '') $errors[] = 'Please provide a cover image URL.';
+if (!$id && empty($_FILES['image']['name'])) $errors[] = 'Please upload a cover image.';
 
 if ($errors) {
     json_response(['ok' => false, 'error' => implode(' ', $errors)], 422);
+}
+
+// --- Handle file uploads (cover image required-on-create, floor plan optional) --
+$allowedMime = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+$maxBytes = 5 * 1024 * 1024;
+$uploadDir = __DIR__ . '/../../assets/uploads/';
+
+function save_uploaded_image(array $file, string $prefix, string $uploadDir, array $allowedMime, int $maxBytes): string
+{
+    if ($file['size'] > $maxBytes) {
+        json_response(['ok' => false, 'error' => 'Each image must be 5MB or smaller.'], 422);
+    }
+    $mime = function_exists('mime_content_type') ? mime_content_type($file['tmp_name']) : $file['type'];
+    if (!isset($allowedMime[$mime])) {
+        json_response(['ok' => false, 'error' => 'Images must be JPEG, PNG, or WebP.'], 422);
+    }
+    $ext = $allowedMime[$mime];
+    $filename = $prefix . '-' . time() . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
+    if (!move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
+        json_response(['ok' => false, 'error' => 'Could not save the uploaded image.'], 500);
+    }
+    return 'assets/uploads/' . $filename;
+}
+
+$imageUrl = $existingImageUrl;
+if (!empty($_FILES['image']['name'])) {
+    if ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+        json_response(['ok' => false, 'error' => 'The cover image failed to upload — please try again.'], 422);
+    }
+    $imageUrl = save_uploaded_image($_FILES['image'], 'property', $uploadDir, $allowedMime, $maxBytes);
+}
+
+$floorPlanUrl = $existingFloorPlanUrl;
+if (!empty($_FILES['floor_plan']['name'])) {
+    if ($_FILES['floor_plan']['error'] !== UPLOAD_ERR_OK) {
+        json_response(['ok' => false, 'error' => 'The floor plan image failed to upload — please try again.'], 422);
+    }
+    $floorPlanUrl = save_uploaded_image($_FILES['floor_plan'], 'floorplan', $uploadDir, $allowedMime, $maxBytes);
+}
+
+if ($imageUrl === '') {
+    json_response(['ok' => false, 'error' => 'Please provide a cover image.'], 422);
 }
 
 $amenities = array_values(array_filter(array_map('trim', explode(',', $amenitiesRaw))));

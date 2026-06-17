@@ -30,6 +30,18 @@ const RATE_PER_SQM = {
 
 const FINISH_MULTIPLIER = { standard: 1.0, premium: 1.35, luxury: 1.8 };
 const LOCATION_MULTIPLIER = { lagos: 1.15, abuja: 1.1, 'port-harcourt': 1.0, other: 0.92 };
+const BUILDING_TYPE_MULTIPLIER = {
+  bungalow: 1.0,          // simple single-storey footprint, baseline
+  duplex: 1.08,           // dual living levels, extra stairs/structure
+  terrace: 0.92,          // shared party walls reduce material cost
+  'semi-detached': 0.96,  // partially shared walls
+  detached: 1.05,         // fully exposed walls on all sides
+  'block-of-flats': 0.9,  // repeated standardised units, economies of scale
+};
+const BUILDING_TYPE_LABEL = {
+  bungalow: 'Bungalow', duplex: 'Duplex', terrace: 'Terrace House',
+  'semi-detached': 'Semi-Detached House', detached: 'Detached House', 'block-of-flats': 'Block of Flats',
+};
 
 const sqmSlider = document.getElementById('sqm-slider');
 const sqmDisplay = document.getElementById('sqm-display');
@@ -37,6 +49,7 @@ const bedroomsSelect = document.getElementById('bedrooms-select');
 const floorsSelect = document.getElementById('floors-select');
 const finishSelector = document.getElementById('finish-selector');
 const locationSelector = document.getElementById('location-selector');
+const buildingTypeSelector = document.getElementById('building-type-selector');
 const breakdownList = document.getElementById('breakdown-list');
 const subtotalEl = document.getElementById('subtotal-value');
 const feesEl = document.getElementById('fees-value');
@@ -48,6 +61,7 @@ let state = {
   sqm: Number(sqmSlider.value),
   bedrooms: bedroomsSelect.value,
   floors: Number(floorsSelect.value),
+  buildingType: 'bungalow',
   finish: 'standard',
   location: 'lagos',
 };
@@ -64,10 +78,11 @@ function updateSliderFill(slider) {
 function calculate() {
   const finishMult = FINISH_MULTIPLIER[state.finish];
   const locationMult = LOCATION_MULTIPLIER[state.location];
+  const buildingTypeMult = BUILDING_TYPE_MULTIPLIER[state.buildingType];
   const floorMult = 1 + (state.floors - 1) * 0.06; // taller builds cost a bit more per sqm
 
   const lineItems = Object.entries(RATE_PER_SQM).map(([label, baseRate]) => {
-    const amount = baseRate * state.sqm * finishMult * locationMult * floorMult;
+    const amount = baseRate * state.sqm * finishMult * locationMult * floorMult * buildingTypeMult;
     return { label, amount };
   });
 
@@ -112,7 +127,7 @@ function render() {
     const lines = lineItems.map((i) => `- ${i.label}: ${formatNaira(i.amount)}`).join('\n');
     messageField.value =
       `Build estimate request:\n` +
-      `${state.bedrooms}-bedroom, ${state.floors}-floor home, ${state.sqm} sqm, ${finishLabel} finish, ${locationLabel}.\n\n` +
+      `${state.bedrooms}-bedroom ${BUILDING_TYPE_LABEL[state.buildingType]}, ${state.floors}-floor, ${state.sqm} sqm, ${finishLabel} finish, ${locationLabel}.\n\n` +
       `Itemised estimate:\n${lines}\n\n` +
       `Subtotal: ${formatNaira(subtotal)}\nFees (8%): ${formatNaira(fees)}\nContingency (5%): ${formatNaira(contingency)}\n` +
       `Grand Total: ${formatNaira(grandTotal)}\n\nPlease send a formal, fixed-price quote for this specification.`;
@@ -133,6 +148,15 @@ bedroomsSelect.addEventListener('change', () => {
 
 floorsSelect.addEventListener('change', () => {
   state.floors = Number(floorsSelect.value);
+  render();
+});
+
+buildingTypeSelector.addEventListener('click', (e) => {
+  const btn = e.target.closest('.type-pill');
+  if (!btn) return;
+  buildingTypeSelector.querySelectorAll('.type-pill').forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.buildingType = btn.dataset.buildingType;
   render();
 });
 

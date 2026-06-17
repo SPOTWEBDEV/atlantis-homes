@@ -1,7 +1,10 @@
+
 /**
- * investor-hub.js — Smart Investment ROI calculator.
+ * investor-hub.js — Smart Investment ROI calculator + the Invest Now modal
+ * shared by both investment boards (company fund and standalone investment
+ * properties).
  *
- * Model:
+ * Calculator model:
  *   - Capital appreciation compounds annually. The annual rate is derived
  *     from the development type's average 5-year total ROI (seeded from
  *     real listing data via window.ATLANTIS_RATES), so a slider move on
@@ -126,3 +129,62 @@ typeSelector.addEventListener('click', (e) => {
 updateSliderFill(amountSlider);
 updateSliderFill(yieldSlider);
 render();
+
+// ---------------------------------------------------------------------
+// Invest Now modal — shared by every card on both investment boards
+// ---------------------------------------------------------------------
+const investModal = document.getElementById('invest-modal');
+if (investModal) {
+  const titleEl = document.getElementById('invest-modal-title');
+  const subtitleEl = document.getElementById('invest-modal-subtitle');
+  const opportunityIdInput = document.getElementById('invest-opportunity-id');
+  const amountInput = document.getElementById('invest-amount-input');
+  const minNote = document.getElementById('invest-min-note');
+  const messageField = document.getElementById('invest-message-field');
+  const closeBtn = document.getElementById('close-invest-modal');
+  const backdrop = document.getElementById('invest-modal-backdrop');
+
+  function openInvestModal(btn) {
+    const { id, name, min, roi, term } = btn.dataset;
+    titleEl.textContent = `Invest in ${name}`;
+    subtitleEl.textContent = `${roi}% expected ROI over a ${term}-month term.`;
+    opportunityIdInput.value = id;
+    amountInput.min = min;
+    amountInput.value = min;
+    minNote.textContent = `Minimum investment: ${formatNaira(Number(min))}`;
+    updateInvestMessage(name, roi, term, Number(min));
+    investModal.classList.remove('hidden');
+    investModal.classList.add('flex');
+  }
+
+  function closeInvestModal() {
+    investModal.classList.add('hidden');
+    investModal.classList.remove('flex');
+  }
+
+  function updateInvestMessage(name, roi, term, amount) {
+    messageField.value =
+      `Investment reservation request from the Investor Hub.\n` +
+      `Opportunity: ${name}\nAmount: ${formatNaira(amount)}\n` +
+      `Expected ROI: ${roi}%\nTerm: ${term} months\n\n` +
+      `Please follow up to finalise the contract and payment schedule.`;
+  }
+
+  document.querySelectorAll('.invest-now-btn').forEach((btn) => {
+    btn.addEventListener('click', () => openInvestModal(btn));
+  });
+
+  amountInput.addEventListener('input', () => {
+    const btn = document.querySelector(`.invest-now-btn[data-id="${opportunityIdInput.value}"]`);
+    if (!btn) return;
+    updateInvestMessage(btn.dataset.name, btn.dataset.roi, btn.dataset.term, Number(amountInput.value || 0));
+  });
+
+  closeBtn.addEventListener('click', closeInvestModal);
+  backdrop.addEventListener('click', closeInvestModal);
+
+  // Once inquiry-form.js confirms a successful submit, close the modal after a beat
+  document.getElementById('invest-form')?.addEventListener('inquiry:submitted', () => {
+    setTimeout(closeInvestModal, 1800);
+  });
+}

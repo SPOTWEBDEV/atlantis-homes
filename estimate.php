@@ -50,6 +50,18 @@ require __DIR__ . '/includes/header.php';
     </div>
 
     <fieldset class="mb-8">
+      <legend class="text-sm font-medium mb-3">Building Type</legend>
+      <div class="grid grid-cols-2 gap-2" id="building-type-selector">
+        <button type="button" data-building-type="bungalow" class="type-pill active">Bungalow</button>
+        <button type="button" data-building-type="duplex" class="type-pill">Duplex</button>
+        <button type="button" data-building-type="terrace" class="type-pill">Terrace House</button>
+        <button type="button" data-building-type="semi-detached" class="type-pill">Semi-Detached</button>
+        <button type="button" data-building-type="detached" class="type-pill">Detached House</button>
+        <button type="button" data-building-type="block-of-flats" class="type-pill">Block of Flats</button>
+      </div>
+    </fieldset>
+
+    <fieldset class="mb-8">
       <legend class="text-sm font-medium mb-3">Finish Level</legend>
       <div class="grid grid-cols-3 gap-2" id="finish-selector">
         <button type="button" data-finish="standard" class="type-pill active">Standard</button>

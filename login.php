@@ -43,6 +43,8 @@ require __DIR__ . '/includes/header.php';
       <p>Admin — admin@atlantishomes.ng / Admin@123</p>
     </div>
   </form>
+
+  <p class="text-sm text-slate text-center mt-6">New investor? <a href="<?= base_url('register.php') ?>" class="text-gold hover:text-gold-light">Create an account</a></p>
 </section>
 
 <script>

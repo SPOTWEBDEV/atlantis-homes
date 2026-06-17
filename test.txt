@@ -1,5 +1,20 @@
-cd ./ && php -l includes/db.php && rm -f data/atlantis.sqlite && php -r '
-require "includes/db.php";
-$pdo = get_db();
-print_r($pdo->query("SELECT type,name,status FROM inquiries")->fetchAll(PDO::FETCH_ASSOC));
-'
+cat > /tmp/make_old_schema.php << 'PHPEOF'
+<?php
+$dbPath = './data/atlantis.sqlite';
+@unlink($dbPath);
+$pdo = new PDO('sqlite:' . $dbPath);
+$pdo->exec("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT UNIQUE, password_hash TEXT, role TEXT, created_at TEXT DEFAULT (datetime('now')))");
+$pdo->exec("CREATE TABLE properties (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, location TEXT, type TEXT, price_naira REAL, bedrooms INT, bathrooms INT, size_sqm INT, roi_5yr_pct REAL, roi_10yr_pct REAL, milestone_stage TEXT, summary TEXT, overview TEXT, amenities_json TEXT, floor_plan_url TEXT, image_url TEXT, featured INT DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))");
+$pdo->exec("CREATE TABLE property_updates (id INTEGER PRIMARY KEY AUTOINCREMENT, property_id INT, admin_id INT, milestone TEXT, note TEXT, photo_path TEXT, created_at TEXT DEFAULT (datetime('now')))");
+$pdo->exec("CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, property_id INT, total_price REAL, amount_paid REAL DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))");
+$pdo->exec("CREATE TABLE payments (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_id INT, amount REAL, label TEXT, paid_on TEXT DEFAULT (datetime('now')))");
+$pdo->exec("CREATE TABLE reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, guest_name TEXT, guest_email TEXT, rating INT, title TEXT, body TEXT, verified_owner INT DEFAULT 0, status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now')))");
+// OLD inquiries table — no user_id column (the exact bug the user hit)
+$pdo->exec("CREATE TABLE inquiries (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, name TEXT, email TEXT, phone TEXT DEFAULT '', property_id INT, preferred_date TEXT DEFAULT '', message TEXT, status TEXT DEFAULT 'new', created_at TEXT DEFAULT (datetime('now')))");
+$pdo->prepare("INSERT INTO users (name,email,password_hash,role) VALUES (?,?,?,?)")->execute(['Admin','admin@atlantishomes.ng',password_hash('Admin@123',PASSWORD_DEFAULT),'admin']);
+echo "Old-schema DB created.\n";
+PHPEOF
+php /tmp/make_old_schema.php
+
+echo "--- columns BEFORE migration ---"
+php -r '$pdo = new PDO("sqlite:./data/atlantis.sqlite"); foreach ($pdo->query("PRAGMA table_info(inquiries)") as $c) echo $c["name"]."\n";'

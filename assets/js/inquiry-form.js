@@ -25,7 +25,7 @@
       successEl?.classList.add('hidden');
 
       const payload = { type: form.dataset.inquiryType };
-      ['name', 'email', 'phone', 'property_id', 'preferred_date', 'message'].forEach((field) => {
+      ['name', 'email', 'phone', 'property_id', 'investment_id', 'preferred_date', 'message', 'spec_details'].forEach((field) => {
         if (form.elements[field]) payload[field] = form.elements[field].value;
       });
 
