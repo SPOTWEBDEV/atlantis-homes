@@ -7,20 +7,35 @@ $pageTitle = $pageTitle ?? 'Atlantis Homes';
 $activeNav = $activeNav ?? '';
 $navUser   = current_user();
 ?>
-<!DOCTYPE html>
-<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= h($pageTitle) ?> | Atlantis Homes</title>
 <meta name="description" content="Atlantis Homes — premium construction and smart real estate investment in Lagos and Abuja.">
 
+<meta property="og:type" content="website">
+<meta property="og:title" content="<?= h($pageTitle) ?> | Atlantis Homes">
+<meta property="og:description" content="Atlantis Homes — premium construction and smart real estate investment in Lagos and Abuja.">
+<meta property="og:url" content="<?= base_url($_SERVER['REQUEST_URI'] ?? '') ?>">
+<meta property="og:image" content="<?= base_url('assets/images/logo.png') ?>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="Atlantis Homes">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<?= h($pageTitle) ?> | Atlantis Homes">
+<meta name="twitter:description" content="Atlantis Homes — premium construction and smart real estate investment in Lagos and Abuja.">
+<meta name="twitter:image" content="<?= base_url('assets/images/logo.png') ?>">
+
+<link rel="icon" type="image/png" sizes="32x32" href="<?= base_url('assets/images/logo.png') ?>">
+<link rel="icon" type="image/png" sizes="16x16" href="<?= base_url('assets/images/logo.png') ?>">
+<link rel="apple-touch-icon" sizes="180x180" href="<?= base_url('assets/images/logo.png') ?>">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-
- <script src="<?= base_url('assets/js/tailwind.js') ?>"></script>
+<script src="<?= base_url('assets/js/tailwind.js') ?>"></script>
 <script>
   tailwind.config = {
     theme: {
@@ -41,10 +56,6 @@ $navUser   = current_user();
 <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">
 
 <script>
-  // Every page-specific JS file (portfolio.js, reviews.js, admin.js, ...)
-  // prefixes its fetch() calls with this so AJAX endpoints resolve
-  // correctly whether the app lives at the domain root or in a subfolder
-  // like /atlantis-homes/.
   window.ATLANTIS_BASE_URL = <?= json_encode(base_path()) ?>;
 </script>
 </head>
@@ -53,13 +64,10 @@ $navUser   = current_user();
 <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-gold focus:text-obsidian focus:px-4 focus:py-2 focus:rounded">Skip to content</a>
 
 <header id="site-nav" class="fixed top-0 inset-x-0 z-40 glass border-b border-white/10 transition-colors">
-  <nav class="max-w-7xl mx-auto px-6 lg:px-10 h-20 flex items-center justify-between">
+  <nav class="max-w-7xl mx-auto px-6 lg:px-10  flex items-center justify-between">
     <a href="<?= base_url('index.php') ?>" class="flex items-center gap-2 group">
-      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-gold">
-        <path d="M15 2L27 24H3L15 2Z" stroke="currentColor" stroke-width="1.4"/>
-        <path d="M15 11L21 24H9L15 11Z" fill="currentColor"/>
-      </svg>
-      <span class="font-display text-xl tracking-wide">Atlantis <span class="text-gold">Homes</span></span>
+      <img src="<?= base_url('assets/images/logo.png') ?>" alt="Atlantis Homes" class="w-[200px] object-contain group-hover:scale-105 transition-transform">
+      
     </a>
 
     <div class="hidden lg:flex items-center gap-7 font-medium text-sm">

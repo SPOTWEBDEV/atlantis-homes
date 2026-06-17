@@ -23,6 +23,25 @@ $navItems = [
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= h($pageTitle) ?> | Atlantis Admin</title>
+<meta name="description" content="Atlantis Homes — premium construction and smart real estate investment in Lagos and Abuja.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="<?= h($pageTitle) ?> | Atlantis Homes">
+<meta property="og:description" content="Atlantis Homes — premium construction and smart real estate investment in Lagos and Abuja.">
+<meta property="og:url" content="<?= base_url($_SERVER['REQUEST_URI'] ?? '') ?>">
+<meta property="og:image" content="<?= base_url('assets/images/logo.png') ?>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="Atlantis Homes">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<?= h($pageTitle) ?> | Atlantis Homes">
+<meta name="twitter:description" content="Atlantis Homes — premium construction and smart real estate investment in Lagos and Abuja.">
+<meta name="twitter:image" content="<?= base_url('assets/images/logo.png') ?>">
+
+<link rel="icon" type="image/png" sizes="32x32" href="<?= base_url('assets/images/logo.png') ?>">
+<link rel="icon" type="image/png" sizes="16x16" href="<?= base_url('assets/images/logo.png') ?>">
+<link rel="apple-touch-icon" sizes="180x180" href="<?= base_url('assets/images/logo.png') ?>">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,11 +76,13 @@ $navItems = [
   <!-- Sidebar -->
   <aside class="hidden lg:flex w-72 flex-col border-r border-white/10 bg-obsidian-soft bg-[#0E0E10] px-6 py-8 shrink-0">
     <a href="<?= base_url('admin/index.php') ?>" class="flex items-center gap-2 mb-12">
-      <svg width="26" height="26" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-gold">
+      <!-- <svg width="26" height="26" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-gold">
         <path d="M15 2L27 24H3L15 2Z" stroke="currentColor" stroke-width="1.4"/>
         <path d="M15 11L21 24H9L15 11Z" fill="currentColor"/>
       </svg>
-      <span class="font-display text-lg">Atlantis <span class="text-gold">Admin</span></span>
+      <span class="font-display text-lg">Atlantis <span class="text-gold">Admin</span></span> -->
+
+      <img src="<?= base_url('assets/images/logo.png') ?>" alt="Atlantis Homes" class="w-[200px] object-contain">
     </a>
 
     <nav class="flex flex-col gap-1.5">
@@ -89,7 +110,9 @@ $navItems = [
 
   <!-- Mobile topbar -->
   <div class="lg:hidden fixed top-0 inset-x-0 z-40 glass border-b border-white/10 px-5 h-16 flex items-center justify-between">
-    <a href="<?= base_url('admin/index.php') ?>" class="font-display text-lg">Atlantis <span class="text-gold">Admin</span></a>
+    <a href="<?= base_url('admin/index.php') ?>" class="font-display text-lg">
+      <img src="<?= base_url('assets/images/logo.png') ?>" alt="Atlantis Homes" class="w-[150px] object-contain">
+    </a>
     <button id="admin-mobile-menu-btn" class="text-white p-2" aria-label="Toggle menu" aria-expanded="false">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
     </button>
