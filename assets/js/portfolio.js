@@ -12,6 +12,7 @@ const resultsCount = document.getElementById('results-count');
 const emptyState = document.getElementById('empty-state');
 
 const detailCache = new Map(); // property id -> detail payload, avoids re-fetching a tab you've already opened
+const BASE = window.ATLANTIS_BASE_URL || '';
 
 // ---------------------------------------------------------------------
 // Card template — mirrors render_property_card_php() in portfolio.php
@@ -69,7 +70,7 @@ filterBar.addEventListener('click', async (e) => {
 
   grid.style.opacity = '0.4';
   try {
-    const res = await fetch(`/api/get_properties.php?type=${encodeURIComponent(btn.dataset.type)}`);
+    const res = await fetch(`${BASE}/api/get_properties.php?type=${encodeURIComponent(btn.dataset.type)}`);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Could not load properties');
 
@@ -119,7 +120,7 @@ async function loadDetail(id, panel) {
   try {
     let detail = detailCache.get(id);
     if (!detail) {
-      const res = await fetch(`/api/get_property_detail.php?id=${encodeURIComponent(id)}`);
+      const res = await fetch(`${BASE}/api/get_property_detail.php?id=${encodeURIComponent(id)}`);
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Could not load this property');
       detail = data.property;

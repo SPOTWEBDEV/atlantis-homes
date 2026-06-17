@@ -1,0 +1,5 @@
+cd ./ && php -l includes/db.php && rm -f data/atlantis.sqlite && php -r '
+require "includes/db.php";
+$pdo = get_db();
+print_r($pdo->query("SELECT type,name,status FROM inquiries")->fetchAll(PDO::FETCH_ASSOC));
+'

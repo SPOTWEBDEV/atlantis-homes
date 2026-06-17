@@ -127,6 +127,21 @@ function create_schema(PDO $pdo): void
             created_at      TEXT NOT NULL DEFAULT (datetime('now'))
         );
     ");
+
+    $pdo->exec("
+        CREATE TABLE inquiries (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            type            TEXT NOT NULL,              -- 'booking' | 'contact' | 'estimate'
+            name            TEXT NOT NULL,
+            email           TEXT NOT NULL,
+            phone           TEXT NOT NULL DEFAULT '',
+            property_id     INTEGER REFERENCES properties(id),
+            preferred_date  TEXT NOT NULL DEFAULT '',
+            message         TEXT NOT NULL DEFAULT '',
+            status          TEXT NOT NULL DEFAULT 'new', -- 'new' | 'contacted'
+            created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+    ");
 }
 
 function seed_database(PDO $pdo): void
@@ -303,4 +318,20 @@ function seed_database(PDO $pdo): void
             ':verified_owner' => $r['verified_owner'], ':status' => $r['status'],
         ]);
     }
+
+    // --- Inquiries (bookings / contact messages / quote requests) ---------
+    $insertInquiry = $pdo->prepare("
+        INSERT INTO inquiries (type, name, email, phone, property_id, preferred_date, message, status)
+        VALUES (:type, :name, :email, :phone, :property_id, :preferred_date, :message, :status)
+    ");
+    $insertInquiry->execute([
+        ':type' => 'booking', ':name' => 'Funmi Okafor', ':email' => 'funmi.okafor@example.com',
+        ':phone' => '+234 803 555 0192', ':property_id' => $propertyIds[2], ':preferred_date' => date('Y-m-d', strtotime('+5 days')),
+        ':message' => 'Interested in a site tour of the Eko Atlantic units, ideally a weekend morning.', ':status' => 'new',
+    ]);
+    $insertInquiry->execute([
+        ':type' => 'contact', ':name' => 'Patrick Nwosu', ':email' => 'patrick.nwosu@example.com',
+        ':phone' => '+234 701 222 9981', ':property_id' => null, ':preferred_date' => '',
+        ':message' => 'Do you have any payment plans that span beyond 24 months for off-plan units?', ':status' => 'contacted',
+    ]);
 }

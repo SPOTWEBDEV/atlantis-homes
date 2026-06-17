@@ -64,12 +64,12 @@ require __DIR__ . '/includes/header.php';
       <p class="text-gold tracking-[0.25em] text-xs uppercase font-semibold mb-3">Featured Projects</p>
       <h2 class="font-display text-3xl sm:text-4xl">Signature developments, currently open</h2>
     </div>
-    <a href="/portfolio.php" class="hidden sm:inline-block text-sm font-semibold text-gold hover:text-gold-light whitespace-nowrap">View full portfolio &rarr;</a>
+    <a href="<?= base_url('portfolio.php') ?>" class="hidden sm:inline-block text-sm font-semibold text-gold hover:text-gold-light whitespace-nowrap">View full portfolio &rarr;</a>
   </div>
 
   <div class="snap-rail flex gap-6 overflow-x-auto pb-6 px-6 lg:px-10 [&::-webkit-scrollbar]:h-1.5">
     <?php foreach ($featured as $p): ?>
-      <a href="/portfolio.php#property-<?= (int) $p['id'] ?>"
+      <a href="<?= base_url('portfolio.php') ?>#property-<?= (int) $p['id'] ?>"
          class="group snap-rail-item shrink-0 w-[300px] sm:w-[380px] rounded-2xl overflow-hidden border border-white/10 bg-obsidian-card hover:border-gold/50 transition-colors">
         <div class="relative h-56 overflow-hidden">
           <img src="<?= h($p['image_url']) ?>" alt="<?= h($p['name']) ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">

@@ -1,5 +1,41 @@
 <?php
-/** Shorthand for htmlspecialchars — use around every piece of user/DB text echoed into HTML. */
+/**
+ * Works out the URL path the app is installed under, e.g. "" if it lives
+ * at the web root, or "/atlantis-homes" if it's in a subfolder. Computed
+ * once from the project root's real filesystem path vs DOCUMENT_ROOT, so
+ * it gives the same answer no matter how deep the current script is
+ * (a root page, /admin/index.php, /api/get_properties.php — all agree).
+ */
+function base_path(): string
+{
+    static $base = null;
+    if ($base !== null) {
+        return $base;
+    }
+
+    $projectRoot = realpath(__DIR__ . '/..'); // .../atlantis-homes
+    $docRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+    $docRoot = $docRoot !== '' ? realpath($docRoot) : false;
+
+    $base = '';
+    if ($projectRoot !== false && $docRoot !== false) {
+        $projectRoot = str_replace('\\', '/', $projectRoot);
+        $docRootNorm = str_replace('\\', '/', $docRoot);
+        if (stripos($projectRoot, $docRootNorm) === 0) {
+            $base = rtrim(substr($projectRoot, strlen($docRootNorm)), '/');
+        }
+    }
+
+    return $base;
+}
+
+/** Builds an absolute-from-root URL that respects the install subfolder, e.g. base_url('portfolio.php'). */
+function base_url(string $path = ''): string
+{
+    return base_path() . '/' . ltrim($path, '/');
+}
+
+
 function h(?string $value): string
 {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
