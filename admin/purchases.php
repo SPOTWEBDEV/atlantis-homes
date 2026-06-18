@@ -11,7 +11,7 @@ $activeAdminNav = 'purchases';
 $pdo = get_db();
 
 $purchases = $pdo->query("
-    SELECT pu.*, u.name AS investor_name, u.email AS investor_email, p.name AS property_name
+    SELECT pu.*, u.name AS investor_name, u.email AS investor_email, p.name AS property_name, p.milestone_stage
     FROM purchases pu
     JOIN users u ON u.id = pu.user_id
     JOIN properties p ON p.id = pu.property_id
@@ -20,6 +20,7 @@ $purchases = $pdo->query("
 
 $investors = $pdo->query("SELECT id, name, email FROM users WHERE role = 'client' ORDER BY name ASC")->fetchAll();
 $properties = $pdo->query("SELECT id, name, price_naira FROM properties ORDER BY name ASC")->fetchAll();
+$stages = ['Foundation', 'Framing', 'Roofing', 'Finishing', 'Completed'];
 
 require __DIR__ . '/../includes/admin-header.php';
 ?>
@@ -90,6 +91,7 @@ require __DIR__ . '/../includes/admin-header.php';
 <?php
 function render_purchase_card(array $purchase): string
 {
+    global $stages;
     $outstanding = max(0, (float) $purchase['total_price'] - (float) $purchase['amount_paid']);
     $paidPct = $purchase['total_price'] > 0 ? min(100, round(((float) $purchase['amount_paid'] / (float) $purchase['total_price']) * 100)) : 0;
     ob_start();
@@ -100,17 +102,41 @@ function render_purchase_card(array $purchase): string
           <p class="font-medium"><?= h($purchase['investor_name']) ?> <span class="text-slate text-xs">(<?= h($purchase['investor_email']) ?>)</span></p>
           <p class="text-sm text-gold"><?= h($purchase['property_name']) ?></p>
         </div>
-        <button type="button" class="add-payment-btn text-xs font-semibold bg-gold/15 text-gold hover:bg-gold hover:text-obsidian rounded-full px-3.5 py-1.5 transition-colors">+ Add Payment</button>
+        <div class="flex gap-2">
+          <button type="button" class="edit-purchase-btn text-xs font-semibold border border-white/15 hover:border-gold hover:text-gold rounded-full px-3.5 py-1.5 transition-colors">Edit</button>
+          <button type="button" class="add-payment-btn text-xs font-semibold bg-gold/15 text-gold hover:bg-gold hover:text-obsidian rounded-full px-3.5 py-1.5 transition-colors">+ Add Payment</button>
+        </div>
       </div>
 
-      <div class="grid sm:grid-cols-3 gap-4 text-sm mb-4">
-        <div><p class="text-xs text-slate">Total Price</p><p class="font-medium"><?= naira((float) $purchase['total_price']) ?></p></div>
-        <div><p class="text-xs text-slate">Paid (<?= $paidPct ?>%)</p><p class="font-medium text-gold paid-amount"><?= naira((float) $purchase['amount_paid']) ?></p></div>
+      <div class="grid sm:grid-cols-4 gap-4 text-sm mb-4">
+        <div><p class="text-xs text-slate">Total Price</p><p class="font-medium total-price-amount"><?= naira((float) $purchase['total_price']) ?></p></div>
+        <div><p class="text-xs text-slate">Paid (<span class="paid-pct"><?= $paidPct ?></span>%)</p><p class="font-medium text-gold paid-amount"><?= naira((float) $purchase['amount_paid']) ?></p></div>
         <div><p class="text-xs text-slate">Outstanding</p><p class="font-medium outstanding-amount"><?= naira($outstanding) ?></p></div>
+        <div><p class="text-xs text-slate">Construction Milestone</p><p class="font-medium milestone-label text-gold"><?= h($purchase['milestone_stage']) ?></p></div>
       </div>
       <div class="h-1.5 rounded-full bg-white/5 overflow-hidden">
         <div class="h-full bg-gold payment-progress-bar" style="width: <?= $paidPct ?>%"></div>
       </div>
+
+      <!-- Inline "Edit" form: Total Price + Construction Milestone, hidden until Edit is clicked -->
+      <form class="edit-purchase-form hidden mt-5 pt-5 border-t border-white/10 grid sm:grid-cols-3 gap-3 items-end" novalidate>
+        <input type="hidden" name="purchase_id" value="<?= (int) $purchase['id'] ?>">
+        <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+        <label class="text-xs text-slate block">
+          <span class="block mb-1">Total Price (₦)</span>
+          <input type="number" name="total_price" required min="0" step="100000" value="<?= (float) $purchase['total_price'] ?>" class="w-full bg-white/5 border border-white/15 focus:border-gold rounded-xl px-3 py-2 text-sm outline-none">
+        </label>
+        <label class="text-xs text-slate block">
+          <span class="block mb-1">Construction Milestone</span>
+          <select name="milestone" class="w-full bg-white/5 border border-white/15 focus:border-gold rounded-xl px-3 py-2 text-sm outline-none">
+            <?php foreach ($stages as $stage): ?>
+              <option value="<?= h($stage) ?>" <?= $stage === $purchase['milestone_stage'] ? 'selected' : '' ?>><?= h($stage) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <button type="submit" class="bg-gold hover:bg-gold-light text-obsidian font-semibold rounded-xl text-sm py-2 transition-colors">Save Changes</button>
+      </form>
+      <p class="edit-form-error hidden text-xs text-red-400 mt-2" role="alert"></p>
 
       <!-- Inline "Add Payment" form, hidden until the button above is clicked -->
       <form class="add-payment-form hidden mt-5 pt-5 border-t border-white/10 grid sm:grid-cols-3 gap-3" novalidate>

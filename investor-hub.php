@@ -23,6 +23,13 @@ $companyOpportunities = get_db()->query("SELECT * FROM investment_opportunities 
 $propertyOpportunities = get_db()->query("SELECT * FROM investment_opportunities WHERE type = 'property' ORDER BY created_at DESC")->fetchAll();
 $user = current_user();
 
+$requestedInvestmentIds = [];
+if ($user) {
+    $stmt = get_db()->prepare("SELECT investment_id FROM inquiries WHERE type = 'investment' AND user_id = ? AND investment_id IS NOT NULL");
+    $stmt->execute([$user['id']]);
+    $requestedInvestmentIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -110,7 +117,7 @@ require __DIR__ . '/includes/header.php';
 
   <div class="grid sm:grid-cols-2 gap-6">
     <?php foreach ($companyOpportunities as $opp): ?>
-      <?= render_investment_card($opp, $user) ?>
+      <?= render_investment_card($opp, $user, $requestedInvestmentIds) ?>
     <?php endforeach; ?>
     <?php if (empty($companyOpportunities)): ?>
       <p class="text-slate sm:col-span-2">No company-wide offerings are open right now — check back soon.</p>
@@ -130,7 +137,7 @@ require __DIR__ . '/includes/header.php';
 
   <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
     <?php foreach ($propertyOpportunities as $opp): ?>
-      <?= render_investment_card($opp, $user) ?>
+      <?= render_investment_card($opp, $user, $requestedInvestmentIds) ?>
     <?php endforeach; ?>
     <?php if (empty($propertyOpportunities)): ?>
       <p class="text-slate sm:col-span-3">No standalone investment properties are open right now — check back soon.</p>
@@ -188,7 +195,7 @@ require __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <?php
-function render_investment_card(array $opp, ?array $user): string
+function render_investment_card(array $opp, ?array $user, array $requestedInvestmentIds = []): string
 {
     $pct = $opp['target_amount'] > 0 ? min(100, round(((float) $opp['amount_raised'] / (float) $opp['target_amount']) * 100)) : 0;
     $isOpen = $opp['status'] === 'open';
@@ -218,8 +225,13 @@ function render_investment_card(array $opp, ?array $user): string
         </div>
         <p class="text-xs text-slate mt-2">Minimum investment: <?= naira((float) $opp['min_investment']) ?></p>
 
+        <?php
+          $alreadyRequested = $user && in_array((int) $opp['id'], $requestedInvestmentIds, true);
+        ?>
         <?php if (!$isOpen): ?>
           <button type="button" disabled class="mt-5 w-full text-sm font-semibold border border-white/10 text-slate rounded-full py-2.5 cursor-not-allowed">Fully Subscribed</button>
+        <?php elseif ($alreadyRequested): ?>
+          <button type="button" disabled class="mt-5 w-full text-sm font-semibold border border-gold/30 text-gold/70 rounded-full py-2.5 cursor-not-allowed">Request Submitted &mdash; We'll Be In Touch</button>
         <?php elseif ($user): ?>
           <button type="button" class="invest-now-btn mt-5 w-full bg-gold hover:bg-gold-light text-obsidian font-semibold rounded-full py-2.5 transition-colors"
             data-id="<?= (int) $opp['id'] ?>" data-name="<?= h($opp['name']) ?>" data-min="<?= (float) $opp['min_investment'] ?>"

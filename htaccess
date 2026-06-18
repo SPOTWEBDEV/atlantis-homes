@@ -1,0 +1,3 @@
+# Defense in depth: deny everything in this folder, no exceptions.
+# The SQLite database file lives here and must never be web-accessible.
+Require all denied
