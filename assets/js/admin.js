@@ -183,23 +183,66 @@ if (purchaseModal) {
 const purchasesList = document.getElementById('purchases-list');
 if (purchasesList) {
   purchasesList.addEventListener('click', (e) => {
-    const btn = e.target.closest('.add-payment-btn');
-    if (!btn) return;
-    const card = btn.closest('.purchase-card');
-    card.querySelector('.add-payment-form').classList.toggle('hidden');
+    const addBtn = e.target.closest('.add-payment-btn');
+    const editBtn = e.target.closest('.edit-purchase-btn');
+    if (addBtn) {
+      const card = addBtn.closest('.purchase-card');
+      card.querySelector('.add-payment-form').classList.toggle('hidden');
+      return;
+    }
+    if (editBtn) {
+      const card = editBtn.closest('.purchase-card');
+      card.querySelector('.edit-purchase-form').classList.toggle('hidden');
+    }
   });
 
   purchasesList.addEventListener('submit', async (e) => {
-    const form = e.target.closest('.add-payment-form');
-    if (!form) return;
+    const editForm = e.target.closest('.edit-purchase-form');
+    const paymentForm = e.target.closest('.add-payment-form');
+
+    if (editForm) {
+      e.preventDefault();
+      const card = editForm.closest('.purchase-card');
+      const errorEl = card.querySelector('.edit-form-error');
+      errorEl.classList.add('hidden');
+
+      const payload = Object.fromEntries(new FormData(editForm).entries());
+      const submitBtn = editForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch(`${BASE}/admin/actions/update_purchase.php`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Could not save these changes.');
+
+        card.querySelector('.total-price-amount').textContent = data.total_price;
+        card.querySelector('.outstanding-amount').textContent = data.outstanding;
+        card.querySelector('.paid-pct').textContent = data.paid_pct;
+        card.querySelector('.payment-progress-bar').style.width = data.paid_pct + '%';
+        card.querySelector('.milestone-label').textContent = data.milestone;
+        editForm.classList.add('hidden');
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+      }
+      return;
+    }
+
+    if (!paymentForm) return;
     e.preventDefault();
 
-    const card = form.closest('.purchase-card');
+    const card = paymentForm.closest('.purchase-card');
     const errorEl = card.querySelector('.payment-form-error');
     errorEl.classList.add('hidden');
 
-    const payload = Object.fromEntries(new FormData(form).entries());
-    const submitBtn = form.querySelector('button[type="submit"]');
+    const payload = Object.fromEntries(new FormData(paymentForm).entries());
+    const submitBtn = paymentForm.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
 
     try {
@@ -213,9 +256,10 @@ if (purchasesList) {
 
       card.querySelector('.paid-amount').textContent = data.amount_paid;
       card.querySelector('.outstanding-amount').textContent = data.outstanding;
+      card.querySelector('.paid-pct').textContent = data.paid_pct;
       card.querySelector('.payment-progress-bar').style.width = data.paid_pct + '%';
-      form.reset();
-      form.classList.add('hidden');
+      paymentForm.reset();
+      paymentForm.classList.add('hidden');
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.classList.remove('hidden');

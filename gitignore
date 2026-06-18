@@ -1,0 +1,18 @@
+# Local SQLite database (auto-created on first run — never commit real data)
+data/*.sqlite
+data/*.sqlite-journal
+
+# User-uploaded site/property photos (auto-created — never commit uploads)
+assets/uploads/*
+!assets/uploads/.gitkeep
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Local env overrides, if you add any later
+.env
+.env.local

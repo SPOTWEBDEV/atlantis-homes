@@ -56,6 +56,7 @@ const feesEl = document.getElementById('fees-value');
 const contingencyEl = document.getElementById('contingency-value');
 const grandTotalEl = document.getElementById('grand-total');
 const messageField = document.getElementById('estimate-message-field');
+const specDetailsField = document.getElementById('estimate-spec-details-field');
 
 let state = {
   sqm: Number(sqmSlider.value),
@@ -131,6 +132,18 @@ function render() {
       `Itemised estimate:\n${lines}\n\n` +
       `Subtotal: ${formatNaira(subtotal)}\nFees (8%): ${formatNaira(fees)}\nContingency (5%): ${formatNaira(contingency)}\n` +
       `Grand Total: ${formatNaira(grandTotal)}\n\nPlease send a formal, fixed-price quote for this specification.`;
+  }
+
+  if (specDetailsField) {
+    specDetailsField.value = JSON.stringify({
+      building_type: BUILDING_TYPE_LABEL[state.buildingType],
+      bedrooms: state.bedrooms,
+      floors: state.floors,
+      total_build_area: `${state.sqm} sqm`,
+      finish_level: state.finish[0].toUpperCase() + state.finish.slice(1),
+      location: state.location.replace('-', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      grand_total: formatNaira(grandTotal),
+    });
   }
 }
 

@@ -108,6 +108,7 @@ require __DIR__ . '/includes/header.php';
 
     <form id="estimate-quote-form" data-inquiry-type="estimate" novalidate>
       <input type="hidden" name="message" id="estimate-message-field">
+      <input type="hidden" name="spec_details" id="estimate-spec-details-field">
       <div class="grid sm:grid-cols-2 gap-5 mb-5">
         <label class="block text-sm">
           <span class="block font-medium mb-1.5">Full Name</span>

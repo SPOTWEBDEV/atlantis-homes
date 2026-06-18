@@ -1,11 +1,16 @@
 <?php
 /**
  * POST /api/submit_inquiry.php
- * Body (JSON): { type: 'booking'|'contact'|'estimate', name, email, phone?, property_id?, preferred_date?, message }
+ * Body (JSON): { type: 'booking'|'contact'|'estimate'|'investment', name, email,
+ *                phone?, property_id?, investment_id?, preferred_date?, message,
+ *                spec_details? }
  *
- * One endpoint backs three forms (book-a-session.php, contact.php, and the
- * "Request a Detailed Quote" action on estimate.php) since they all reduce
- * to the same shape: who's asking, how to reach them, and what they want.
+ * One endpoint backs every lead-capture form on the site (booking, contact,
+ * the estimate quote request, and the Invest Now modal) since they all
+ * reduce to the same shape: who's asking, how to reach them, and what they
+ * want. spec_details is an optional JSON string of structured fields (e.g.
+ * the exact build spec from the estimator) so the admin view can render a
+ * clean breakdown instead of parsing free text.
  */
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
@@ -20,8 +25,11 @@ $email = trim((string) ($input['email'] ?? ''));
 $phone = trim((string) ($input['phone'] ?? ''));
 $propertyId = filter_var($input['property_id'] ?? null, FILTER_VALIDATE_INT);
 $propertyId = $propertyId ?: null; // filter_var() returns false (not null) on an empty/missing value
+$investmentId = filter_var($input['investment_id'] ?? null, FILTER_VALIDATE_INT);
+$investmentId = $investmentId ?: null;
 $preferredDate = trim((string) ($input['preferred_date'] ?? ''));
 $message = trim((string) ($input['message'] ?? ''));
+$specDetailsRaw = $input['spec_details'] ?? '';
 
 $errors = [];
 
@@ -50,9 +58,39 @@ if ($propertyId) {
     }
 }
 
+if ($investmentId) {
+    $check = get_db()->prepare('SELECT id FROM investment_opportunities WHERE id = ?');
+    $check->execute([$investmentId]);
+    if (!$check->fetch()) {
+        $investmentId = null;
+    }
+}
+
+// A signed-in investor can only request a given opportunity once — repeat
+// clicks (or a second visit) shouldn't pile up duplicate leads for admin.
+if ($type === 'investment' && $investmentId && $user) {
+    $dupeCheck = get_db()->prepare("
+        SELECT id FROM inquiries WHERE type = 'investment' AND investment_id = ? AND user_id = ?
+    ");
+    $dupeCheck->execute([$investmentId, $user['id']]);
+    if ($dupeCheck->fetch()) {
+        json_response(['ok' => false, 'error' => "You've already requested to invest in this opportunity — our team will be in touch."], 409);
+    }
+}
+
+// spec_details arrives as a JSON string (built client-side); re-encode
+// defensively so we only ever store valid, reasonably-sized JSON.
+$specDetails = '';
+if (is_string($specDetailsRaw) && $specDetailsRaw !== '') {
+    $decoded = json_decode($specDetailsRaw, true);
+    if (is_array($decoded)) {
+        $specDetails = substr(json_encode($decoded), 0, 4000);
+    }
+}
+
 $stmt = get_db()->prepare("
-    INSERT INTO inquiries (type, user_id, name, email, phone, property_id, preferred_date, message, status)
-    VALUES (:type, :user_id, :name, :email, :phone, :property_id, :preferred_date, :message, 'new')
+    INSERT INTO inquiries (type, user_id, name, email, phone, property_id, investment_id, preferred_date, message, spec_details, status)
+    VALUES (:type, :user_id, :name, :email, :phone, :property_id, :investment_id, :preferred_date, :message, :spec_details, 'new')
 ");
 $stmt->execute([
     ':type' => $type,
@@ -61,8 +99,10 @@ $stmt->execute([
     ':email' => $email,
     ':phone' => $phone,
     ':property_id' => $propertyId,
+    ':investment_id' => $investmentId,
     ':preferred_date' => $preferredDate,
     ':message' => $message,
+    ':spec_details' => $specDetails,
 ]);
 
 $confirmations = [
